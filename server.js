@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./Config/DB");
+const userRoutes = require('./Routes/userRoutes');
 
 dotenv.config();
 
@@ -9,14 +10,9 @@ connectDB();
 const app = express();
 app.use(express.json());
 
-app.get("/", (req,res)=>{
-    res.send("Server running");
-});
 
 app.listen(5000,()=>{
     console.log("Server started");
 });
+app.use("/api/users",userRoutes)
 
-app.get("/test", (req,res)=>{
-    res.send("API working");
-})
