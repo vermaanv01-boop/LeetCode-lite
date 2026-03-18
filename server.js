@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const connectDB = require("./Config/DB");
 const userRoutes = require('./Routes/userRoutes');
 const problemRoter = require('./Routes/problemRoutes')
+const submissionRoutes = require('./Routes/submissionRoutes')
 
 dotenv.config();
 
@@ -17,4 +18,5 @@ app.listen(5000,()=>{
 });
 app.use("/api/users",userRoutes)
 app.use("api/problems",problemRoter);
+app.use("/api/submission",submissionRoutes);
 

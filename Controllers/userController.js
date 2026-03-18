@@ -63,13 +63,13 @@ const loginUser = async (req, res) => {
   }
 };
 
-const getUserProfile = async (req,res) => {
-    try {
-     const user = await User.findById(req.params.id)
-     .populate("solvedProblems")
-     .populate("submissions");   
-    } catch (err) {
-         res.status(500).json({error:err.message})
-    }
-}
-module.exports = { registerUser, loginUser , getUserProfile };
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .populate("solvedProblems")
+      .populate("submissions");
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+module.exports = { registerUser, loginUser, getUserProfile };
