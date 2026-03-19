@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const protect = require("../middleware/authMiddleware");
+const { submitCode , getUserSubmissions } = require("../controllers/submissionController");
 
-const {submitCode,getUserSubmissions} = require("../Controllers/submissionController");
-
-router.post("/",submitCode);
-router.get("/user/:userId", getUserSubmissions);
+router.post("/submit", protect, submitCode);
+router.get("/user/:userId",protect, getUserSubmissions);
 
 module.exports = router;
