@@ -2,8 +2,8 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./Config/DB");
 const userRoutes = require('./Routes/userRoutes');
-const problemRoter = require('./Routes/problemRoutes')
-const submissionRoutes = require('./Routes/submissionRoutes')
+// const problemRoter = require('./Routes/problemRoutes')
+// const submissionRoutes = require('./Routes/submissionRoutes')
 
 dotenv.config();
 
@@ -13,8 +13,8 @@ const app = express();
 app.use(express.json());
 
 app.use("/api/users",userRoutes)
-app.use("api/problems",problemRoter);
-app.use("/api/submission",submissionRoutes);
+// app.use("api/problems",problemRoter);
+// app.use("/api/submission",submissionRoutes);
 
 
 

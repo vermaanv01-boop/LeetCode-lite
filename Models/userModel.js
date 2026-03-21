@@ -2,9 +2,14 @@ const mongoose = require('mongoose');
 const { ref } = require('process');
 
 const userSchema = new mongoose.Schema({
-    username:{type:String , required:true , unique:true , trim:true},
+    name:{type:String , required:true , unique:true , trim:true},
     email:{type:String , required:true , unique:true , lowercase:true},
     password:{type:String , required:true},
+    mobile_number: {
+  type: Number,
+  unique: true,
+  sparse: true
+},
     avatar:{type:String , default:""},
     role:{type:String , enum:["user" , "admin"] , default:"user"},
     solvedProblems:[{
@@ -19,15 +24,15 @@ const userSchema = new mongoose.Schema({
 
 },{timestamps : true});
 
-userSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
-  this.password = await bcrypt.hash(this.password, 10);
-});
+// userSchema.pre("save", async function () {
+//   if (!this.isModified("password")) return;
+//   this.password = await bcrypt.hash(this.password, 10);
+// });
 
-// compare password
-userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
+// // compare password
+// userSchema.methods.matchPassword = async function (enteredPassword) {
+//   return await bcrypt.compare(enteredPassword, this.password);
+// };
 
 
 module.exports = mongoose.model("User",userSchema);
