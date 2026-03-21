@@ -1,55 +1,55 @@
-const User = require("../Models/userModel");
-const bcrypt = require("bcrypt");
-const generateToken = require("../utils/generateToken");
+const User = require("../models/userModel");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../utils/generateToken");
+
+// cookie options
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 
 // ================= REGISTER =================
 const registerUser = async (req, res) => {
   try {
-    console.log("REGISTER API HIT");
-    console.log("Request Body:", req.body);
+    const { name, email, password, mobile_number } = req.body;
 
-    const { name, email, password ,mobile_number } = req.body;
-
-    if (!name || !email || !password ||!mobile_number ) {
-      console.log("Validation Failed: Missing fields");
+    if (!name || !email || !password || !mobile_number) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
     const userExists = await User.findOne({ email });
-    console.log("User Exists Check:", userExists ? "YES" : "NO");
-
     if (userExists) {
-      console.log("User already exists with email:", email);
       return res.status(400).json({ message: "User already exists" });
     }
 
-    console.log("Hashing password...");
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // plain password — pre("save") hook will hash it
+    const user = await User.create({ name, email, password, mobile_number });
 
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      mobile_number,
-    });
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    console.log("User created:", user._id);
+    // save refreshToken to DB
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
 
-    const token = generateToken(user._id);
-    console.log("Token generated");
+    // send refreshToken as httpOnly cookie
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
     return res.status(201).json({
       message: "User registered successfully",
-      token,
+      accessToken,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
-
   } catch (error) {
-    console.log("REGISTER ERROR:", error.message);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -57,72 +57,43 @@ const registerUser = async (req, res) => {
 // ================= LOGIN =================
 const loginUser = async (req, res) => {
   try {
-    console.log("LOGIN API HIT");
-    console.log("Request Body:", req.body);
-
     const { email, password } = req.body;
 
     if (!email || !password) {
-      console.log("Validation Failed: Missing email/password");
       return res.status(400).json({ message: "All fields are required" });
     }
 
     const user = await User.findOne({ email });
-    console.log("User Found:", user ? "YES" : "NO");
-
     if (!user) {
-      console.log("Login failed: User not found");
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password Match:", isMatch);
-
+    const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      console.log("Login failed: Incorrect password");
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = generateToken(user._id);
-    console.log("Login successful, token generated");
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    // save refreshToken to DB
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    // send refreshToken as httpOnly cookie
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
     return res.status(200).json({
       message: "Login successful",
-      token,
+      accessToken,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
-
   } catch (error) {
-    console.log("LOGIN ERROR:", error.message);
-    return res.status(500).json({ message: error.message });
-  }
-};
-
-// ================= GET USER PROFILE BY ID =================
-const getUserProfile = async (req, res) => {
-  try {
-    console.log("GET USER PROFILE API HIT");
-    console.log("User ID:", req.params.id);
-
-    const user = await User.findById(req.params.id)
-      .populate("solvedProblems")
-      .populate("submissions");
-
-    if (!user) {
-      console.log("User not found");
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    console.log("User profile fetched");
-
-    return res.status(200).json(user);
-
-  } catch (error) {
-    console.log("GET USER PROFILE ERROR:", error.message);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -130,15 +101,95 @@ const getUserProfile = async (req, res) => {
 // ================= GET LOGGED-IN USER =================
 const getProfile = async (req, res) => {
   try {
-    console.log("GET LOGGED-IN USER API HIT");
-    console.log("User from token:", req.user);
+    const user = await User.findById(req.user._id)
+      .select("-password -refreshToken")
+      .populate("solvedProblems")
+      .populate("submissions");
 
-    return res.status(200).json({
-      user: req.user,
-    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
+    return res.status(200).json({ user });
   } catch (error) {
-    console.log("GET PROFILE ERROR:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= GET USER PROFILE BY ID (public) =================
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select("-password -refreshToken -email -mobile_number")
+      .populate("solvedProblems")
+      .populate("submissions");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= UPDATE PROFILE =================
+const updateProfile = async (req, res) => {
+  try {
+    const { name, mobile_number, avatar } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name, mobile_number, avatar },
+      { new: true, runValidators: true }
+    ).select("-password -refreshToken");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ message: "Profile updated", user });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= REFRESH TOKEN =================
+const refreshAccessToken = async (req, res) => {
+  try {
+    const token = req.cookies.refreshToken;
+
+    if (!token) {
+      return res.status(401).json({ message: "No refresh token" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user || user.refreshToken !== token) {
+      return res.status(403).json({ message: "Invalid refresh token" });
+    }
+
+    const accessToken = generateAccessToken(user);
+
+    return res.status(200).json({ accessToken });
+  } catch (error) {
+    return res.status(403).json({ message: "Invalid or expired refresh token" });
+  }
+};
+
+// ================= LOGOUT =================
+const logoutUser = async (req, res) => {
+  try {
+    // clear refreshToken from DB
+    await User.findByIdAndUpdate(req.user._id, { refreshToken: "" });
+
+    // clear cookie
+    res.clearCookie("refreshToken", refreshCookieOptions);
+
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
@@ -146,6 +197,9 @@ const getProfile = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
-  getUserProfile,
   getProfile,
+  getUserProfile,
+  updateProfile,
+  refreshAccessToken,
+  logoutUser,
 };
