@@ -1,23 +1,54 @@
 const runCode = require("../utils/codeRunner");
 
+const normalizeOutput = (output) => {
+  return String(output)
+    .trim()
+    .replace(/\s+/g, " "); // normalize all whitespace
+};
+
 const evaluateSubmission = async (problem, code, language) => {
-  for (const tc of problem.testCases) {
-    const result = await runCode(code, tc.input, language);
+  try {
+    const testCases = problem.testCases;
 
-    if (result.error) {
-      return { status: "runtime_error", detail: result.error };
+    for (let i = 0; i < testCases.length; i++) {
+      const tc = testCases[i];
+
+      const result = await runCode(code, tc.input, language);
+
+      // Runtime / execution error
+      if (result.error) {
+        return {
+          status: "runtime_error",
+          testCase: i + 1,
+          input: tc.input,
+          error: result.error,
+        };
+      }
+
+      const expected = normalizeOutput(tc.output);
+      const actual = normalizeOutput(result.output);
+
+      // Wrong answer
+      if (expected !== actual) {
+        return {
+          status: "wrong_answer",
+          testCase: i + 1,
+          input: tc.input,
+          expected,
+          actual,
+        };
+      }
     }
 
-    // normalize whitespace for comparison
-    const expected = String(tc.output).trim();
-    const actual = String(result.output).trim();
+    // All passed
+    return { status: "accepted" };
 
-    if (expected !== actual) {
-      return { status: "wrong_answer" };
-    }
+  } catch (error) {
+    return {
+      status: "system_error",
+      error: error.message,
+    };
   }
-
-  return { status: "accepted" };
 };
 
 module.exports = { evaluateSubmission };
