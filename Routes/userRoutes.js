@@ -9,7 +9,7 @@ const {
   refreshAccessToken,
   logoutUser,
 } = require('../Controllers/userController');
-const { protect, adminOnly } = require('../middlewares/auth.middleware');
+const { protect, adminOnly } = require('../middleWare/Auth');
 
 // ================= PUBLIC ROUTES =================
 router.post("/register", registerUser);
@@ -24,9 +24,5 @@ router.post("/logout", protect, logoutUser);
 // ================= PUBLIC PROFILE =================
 router.get("/profile/:id", getUserProfile);
 
-// ================= ADMIN ROUTES =================
-router.get("/", protect, adminOnly, getAllUsers);
-router.delete("/:id", protect, adminOnly, deleteUser);
-router.put("/:id/role", protect, adminOnly, updateUserRole);
 
 module.exports = router;

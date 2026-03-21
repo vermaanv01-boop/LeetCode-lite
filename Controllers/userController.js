@@ -3,6 +3,7 @@ const {
   generateAccessToken,
   generateRefreshToken,
 } = require("../utils/generateToken");
+const jwt = require('jsonwebtoken')
 
 // cookie options
 const refreshCookieOptions = {
