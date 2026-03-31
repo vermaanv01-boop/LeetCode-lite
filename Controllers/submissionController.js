@@ -1,5 +1,5 @@
-const Submission = require("../Models/submissionModel");
-const Problem = require("../Models/problemModel");
+const Submission = require("../models/submissionModel");
+const Problem = require("../models/problemModel");
 const { evaluateSubmission } = require("../utils/evaluateSubmission");
 
 // ================= SUBMIT CODE =================

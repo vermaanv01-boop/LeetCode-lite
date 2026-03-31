@@ -1,4 +1,4 @@
-const Problem = require("../Models/problemModel");
+const Problem = require("../models/problemModel");
 
 // ================= CREATE PROBLEM =================
 const createProblem = async (req, res) => {

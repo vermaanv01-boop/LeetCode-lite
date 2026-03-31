@@ -1,11 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const {
+  createProblem,
+  getAllProblems,
+  getProblemById,
+  updateProblem,
+  deleteProblem,
+} = require('../Controllers/problemController');
+const { protect, adminOnly } = require('../middleWare/Auth');
 
-const problemController = require('../Controllers/problemController')
+// ================= PUBLIC ROUTES =================
+router.get("/", getAllProblems);
+router.get("/:id", getProblemById);
 
-router.post("/",problemController.createProblem);
-router.get("/:id",problemController.getProblemById);
-router.get("/:id",problemController.updateProblem);
-router.post("/:id",problemController.deleteProblem);
+// ================= ADMIN ONLY ROUTES =================
+router.post("/", protect, adminOnly, createProblem);
+router.put("/:id", protect, adminOnly, updateProblem);
+router.delete("/:id", protect, adminOnly, deleteProblem);
 
 module.exports = router;
